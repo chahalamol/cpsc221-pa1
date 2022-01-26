@@ -40,6 +40,8 @@ double HueDiff(double hue1, double hue2) {
 */
 ImgList::ImgList() {
   // set appropriate values for all member attributes here
+  northwest = NULL;
+  southeast = NULL;
   
 }
 
