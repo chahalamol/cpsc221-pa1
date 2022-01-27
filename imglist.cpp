@@ -51,7 +51,8 @@ ImgList::ImgList() {
 */
 ImgList::ImgList(PNG& img) {
   // build the linked node structure and set the member attributes appropriately
-  
+  ImgList* img = new ImgList();
+
 }
 
 /*
