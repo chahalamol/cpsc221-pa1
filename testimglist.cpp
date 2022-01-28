@@ -182,4 +182,6 @@ void TestRenderMode2() {
   else {
     cout << "Input PNG image not read. Exiting..." << endl;
   }
+
+
 }
