@@ -31,7 +31,7 @@
  */
 double HueDiff(double hue1, double hue2)
 {
-  return fmin(fabs(hue1 - hue2), fabs(hue2 + 360 - hue1));
+  return fmin(fabs(hue1 - hue2), fabs(360 + fmin(hue1, hue2) - fmax(hue1, hue2)));
 }
 
 /*********************
@@ -291,9 +291,66 @@ unsigned int ImgList::GetDimensionFullX() const
  */
 ImgNode *ImgList::SelectNode(ImgNode *rowstart, int selectionmode)
 {
-  // add your implementation below
+  //   ImgNode* curr = rowstart;
+  //   ImgNode* temp = rowstart;
 
-  return NULL;
+  // if (curr->west || curr->east == NULL) {
+
+  // } else {
+
+  //     if (selectionmode == 0) {
+
+  //       while (curr != NULL) {
+
+  //           if (curr->colour < curr->colour) {
+
+  //             temp = curr; // store
+
+  //             curr = curr->east;
+
+  //           } else {
+
+  //             curr = curr->east;
+
+  //           }
+
+  //       } // after reach end of row
+
+  //       if (temp->colour < curr->colour) {
+
+  //           curr = temp;
+
+  //       }
+
+  //     } else if (selectionmode == 1) {        // minimum hue diff of every node..
+
+  //         while (curr != NULL) {
+
+  //         }
+
+  //         if (HueDiff(curr->colour,curr->east->colour) <= HueDiff(curr->colour, curr->west->colour)) {
+
+  //             curr = curr->east;
+
+  //             temp = curr;
+
+  //         }
+
+  //         if (HueDiff(curr->colour,curr->east->colour) >= HueDiff(curr->colour, curr->west->colour)) {
+
+  //               curr = curr->east;
+
+  //             temp = curr->west;
+
+  //         }
+
+  //         curr = temp;
+
+  //     }
+
+  // }
+
+  // return NULL;  // should be curr
 }
 
 /*
@@ -321,51 +378,59 @@ ImgNode *ImgList::SelectNode(ImgNode *rowstart, int selectionmode)
  */
 PNG ImgList::Render(bool fillgaps, int fillmode) const
 {
-         // PNG has width  height and imageData..
-        // call getDimension(x) or fullX
-        // call getDimensionY
-        // imageData* points to array of pixels 
-        
-
+  // hash is wrong from test  so pointers are not allocatd right
 
   PNG outpng; // this will be returned later. Might be a good idea to resize it at some point.
-// resize it to width of getDimesnionX or full X
-// resize to getDimension Y
+
+  if (fillgaps == false)
+  {
+
+    outpng.resize(this->GetDimensionX(), this->GetDimensionY());
+
+     ImgNode *curr = northwest;
+      ImgNode *temp = northwest;
+      ImgNode *row = northwest;   
+
+    for (int y = 0; y < this->GetDimensionY(); y++)
+    {
+
+     
+
+      for (int x = 0; x < this->GetDimensionX(); x++)
+      {
+        // while loop somewhere? ,.. how
+
+        HSLAPixel *pixel = outpng.getPixel(x, y);
+
+        *pixel = curr->colour;
+
+        curr = curr->east;
+
+           if (curr->east == NULL)
+      { // end of row
+
+        curr = row->south;
+      }
+       if (row->south == NULL)
+      {
+
+        curr = curr->east;
+
+      } // end of column , at bottom
 
 
 
-// have an imglist and want to output a PNG   //nesteed for loop and getPixel?..  then put pixel into imageData[x][y]; 
+      }
+
+ 
 
 
+    }
 
+    
 
-// if fillgaps is false, render one pixel per node  // fillgaps is false if skipright = 0..?
-
-
-
-
-
-      // else render full widht using fillmode integer
-
-
-      // fillmode = 0  // use previous colour of node->east of current node
-      // fillmode = 1 // for diametrio values -- use smaller value of two averages 
-      // 30 and 210 = 300.. 30 + 210 = 240 , 240/2 = 120, 120 + 180 = 300. 
-
-
-
-
-
-
-
-
-  
-
-  
-
-  return outpng;
-
-
+    return outpng;
+  }
 }
 
 /************
@@ -433,14 +498,12 @@ void ImgList::Clear()
 
       temp = curr1->east; // temp pointer to next one
 
-
       delete curr1; // delete node
 
-      curr1 = temp;      // iterate curr
-      
+      curr1 = temp; // iterate curr
 
-      if (temp == NULL) // ^
-      {                 // end of row
+      if (temp == NULL)  // ^
+      {                  // end of row
         curr1 = nextrow; // go down a row
 
         if (nextrow == NULL)
@@ -449,7 +512,9 @@ void ImgList::Clear()
           break;
         }
         nextrow = nextrow->south;
-      } else {
+      }
+      else
+      {
         temp = temp->east; // iterate temp
       }
 
