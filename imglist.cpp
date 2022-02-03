@@ -387,14 +387,12 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const
 
     outpng.resize(this->GetDimensionX(), this->GetDimensionY());
 
-     ImgNode *curr = northwest;
-      ImgNode *temp = northwest;
-      ImgNode *row = northwest;   
+    ImgNode *curr = northwest;
+    ImgNode *temp = northwest;
+    ImgNode *row = northwest;
 
     for (int y = 0; y < this->GetDimensionY(); y++)
     {
-
-     
 
       for (int x = 0; x < this->GetDimensionX(); x++)
       {
@@ -404,33 +402,37 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const
 
         *pixel = curr->colour;
 
-        curr = curr->east;
+        temp = curr->east;
 
-           if (curr->east == NULL)
-      { // end of row
+        curr = temp;
 
-        curr = row->south;
-      }
-       if (row->south == NULL)
-      {
 
-        curr = curr->east;
-
-      } // end of column , at bottom
-
+      
 
 
       }
 
- 
+        if (temp == NULL){
 
+          curr = row->south;
+          temp = row->south;    
+          row = row->south;
+
+        }
 
     }
+      if (row->south == NULL) {
 
+          temp = curr->east;
+          curr = temp;            
+          
+
+      }
     
 
-    return outpng;
   }
+
+  return outpng;
 }
 
 /************
