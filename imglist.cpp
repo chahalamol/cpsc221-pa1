@@ -294,40 +294,47 @@ ImgNode *ImgList::SelectNode(ImgNode *rowstart, int selectionmode)
   ImgNode *curr = rowstart; // first node in a row
   ImgNode *temp = rowstart;
   // return left most node if multiple
+  // shouldnt return ptrs to first and last node
 
   if (selectionmode == 0)
   {
 
-    while (curr != NULL)
-    { // iterate through row
+    while (curr->east != NULL) // avoid last
+    {                          // iterate through row
 
-      if (curr->colour < curr->east->colour || curr->colour == curr->east->colour)
+      if (curr->colour.l < curr->east->colour.l || curr->colour.l == curr->east->colour.l)
       { // if curr
 
-        temp = curr; // store it
-
-        curr = curr->east; // iterate curr
+        curr = curr->east; // iterate curr past first
+        temp = curr;       // store it
       }
 
-      curr = temp; // point back to min luminace, left most node 
+      curr = curr->east;
+
+      curr = temp; // point back to min luminace, left most node
     }
   }
   else if (selectionmode == 1)
   {
 
-      while (curr != NULL){
+    while (curr->east != NULL)
+    {
 
-        
-        
+      curr = curr->east; // get rid of first being option
 
+      double sum = HueDiff(curr->colour.h, curr->east->colour.h) + HueDiff(curr->colour.h, curr->west->colour.h);
 
+      temp = curr;
 
+      if (HueDiff(curr->east->colour.h, curr->east->east->colour.h) + HueDiff(curr->east->colour.h, curr->west->west->colour.h) < sum)
+      {
 
-
+        sum = HueDiff(curr->east->colour.h, curr->east->east->colour.h) + HueDiff(curr->east->colour.h, curr->west->west->colour.h);
+        temp = curr->east;
       }
+    }
 
-
-
+    curr = temp;
   }
 
   return curr;
@@ -455,43 +462,36 @@ void ImgList::Clear()
 
     if (northwest == southeast)
     {
+
       delete northwest;
     }
-
-    ImgNode *curr1 = northwest;
-    ImgNode *temp = northwest;
-    ImgNode *row = northwest;
-    ImgNode *nextrow = northwest->south;
-
-    while (curr1 != NULL)
+    else
     {
 
-      temp = curr1->east; // temp pointer to next one
+      ImgNode *curr = northwest;
+      ImgNode *row = northwest;
 
-      delete curr1; // delete node
+      while (row != NULL)
+      {
 
-      curr1 = temp; // iterate curr
-
-      if (temp == NULL)  // ^
-      {                  // end of row
-        curr1 = nextrow; // go down a row
-
-        if (nextrow == NULL)
+        while (curr != NULL)
         {
 
-          break;
+          delete curr;
+
+          curr = curr->east; // iterate end of row
         }
-        nextrow = nextrow->south;
-      }
-      else
-      {
-        temp = temp->east; // iterate temp
+
+        curr = row->south;
+        row = row->south;
       }
 
-      northwest = NULL;
-      southeast = NULL;
     }
+    
   }
+
+  northwest = NULL;
+  southeast = NULL;
 }
 /* ************************
  *  * OPTIONAL - FOR BONUS *
