@@ -291,10 +291,8 @@ unsigned int ImgList::GetDimensionFullX() const
  */
 ImgNode *ImgList::SelectNode(ImgNode *rowstart, int selectionmode)
 {
-  ImgNode *curr = rowstart; // first node in a row
-  ImgNode *temp = rowstart;
-  // return left most node if multiple
-  // shouldnt return ptrs to first and last node
+  ImgNode *curr = rowstart->east; // past the first
+  ImgNode *temp = rowstart->east;
 
   if (selectionmode == 0)
   {
@@ -302,42 +300,36 @@ ImgNode *ImgList::SelectNode(ImgNode *rowstart, int selectionmode)
     while (curr->east != NULL) // avoid last
     {                          // iterate through row
 
-      if (curr->colour.l < curr->east->colour.l || curr->colour.l == curr->east->colour.l)
-      { // if curr
+      if (curr->colour.l < curr->east->colour.l && curr->colour.l < temp->colour.l) // smaller than temp as well..
+      {                                                                             // if curr
 
-        curr = curr->east; // iterate curr past first
-        temp = curr;       // store it
+        temp = curr; // store min luminance
       }
 
-      curr = curr->east;
-
-      curr = temp; // point back to min luminace, left most node
+      curr = curr->east; // iterate curr past first
     }
   }
   else if (selectionmode == 1)
   {
 
+    double sum = HueDiff(curr->colour.h, curr->east->colour.h) + HueDiff(curr->colour.h, curr->west->colour.h);
+
     while (curr->east != NULL)
     {
 
-      curr = curr->east; // get rid of first being option
-
-      double sum = HueDiff(curr->colour.h, curr->east->colour.h) + HueDiff(curr->colour.h, curr->west->colour.h);
-
-      temp = curr;
-
-      if (HueDiff(curr->east->colour.h, curr->east->east->colour.h) + HueDiff(curr->east->colour.h, curr->west->west->colour.h) < sum)
+      if (HueDiff(curr->east->colour.h, curr->east->east->colour.h) + HueDiff(curr->east->colour.h, curr->colour.h) < sum && HueDiff(curr->east->colour.h, curr->east->east->colour.h) + HueDiff(curr->east->colour.h, curr->colour.h) < HueDiff(temp->east->colour.h, temp->east->east->colour.h) + HueDiff(temp->east->colour.h, temp->colour.h))
       {
 
-        sum = HueDiff(curr->east->colour.h, curr->east->east->colour.h) + HueDiff(curr->east->colour.h, curr->west->west->colour.h);
+        sum = HueDiff(curr->east->colour.h, curr->east->east->colour.h) + HueDiff(curr->east->colour.h, curr->colour.h);
+
         temp = curr->east;
       }
-    }
 
-    curr = temp;
+      curr = curr->east; // just iterate dont reassign temp
+    }
   }
 
-  return curr;
+  return temp;
 }
 
 /*
@@ -365,13 +357,13 @@ ImgNode *ImgList::SelectNode(ImgNode *rowstart, int selectionmode)
  */
 PNG ImgList::Render(bool fillgaps, int fillmode) const
 {
-  // hash is wrong from test  so pointers are not allocatd right
+ 
 
   PNG outpng; // this will be returned later. Might be a good idea to resize it at some point.
 
   // hash is wrong from test  so pointers are not allocatd right
 
-  int k = this->GetDimensionX();
+  int k = this->GetDimensionFullX();
   int j = this->GetDimensionY();
   outpng.resize(k, j);
 
@@ -405,10 +397,71 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const
       x = 0; // reset x
     }
   }
+  else
+  {
+
+    if (fillmode == 0)
+    {
+
+      ImgNode *curr = northwest;
+      ImgNode *row = northwest;
+
+      int x = 0; // x
+      int y = 0; // y
+      int z = 0;
+   
+      
+
+      while (row != NULL)
+      {
+
+        while (curr != NULL)
+        { // iterate left to right
+
+           HSLAPixel *pixel = outpng.getPixel(x, y); 
+                                       
+           *pixel = curr->colour;
+
+        
+          while (z < curr->skipright){
+
+                z++;
+
+                x += z;
+
+               HSLAPixel *pixel = outpng.getPixel(x, y); // pixel to right..
+
+               *pixel = curr->colour;   // set x+1 pixel to same as curr (which is west)
+          
+                } 
+
+              
+
+           curr = curr->east;   // move curr to next node
+
+            x++;    // since we moved again..  
+
+            z = 0;        // restart for next loop 
+        }
+
+        row = row->south;
+        curr = row;
+
+        y++;
+        x = 0; // reset x
+
+      }
+    }
+  }
 
   return outpng;
-  ;
 }
+
+
+
+
+
+
 
 /************
  * MODIFIERS *
@@ -427,6 +480,54 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const
 void ImgList::Carve(int selectionmode)
 {
   // add your implementation here
+
+  // one node removed from each row
+  // ImgNode *ImgList::SelectNode(ImgNode *rowstart, int selectionmode)
+
+  // call selectNode helper
+  // delete that node by pointing a pointer to the selected node
+  // reassign its neighbours pts
+  // update skipvalues of friends.. if curr->south = 1 / west 1 /  EACH ROW In list so every time
+
+  ImgNode *carved = SelectNode(northwest, selectionmode); // same selection mode and starts at NW
+
+  ImgNode *row = northwest;
+
+  while (row != NULL)
+  {
+
+    ImgNode *leftneigh = carved->west;
+    ImgNode *rightneigh = carved->east;
+    ImgNode *northneigh = carved->north;
+    ImgNode *southneigh = carved->south;
+
+    leftneigh->east = rightneigh; // left node east ptr points to currs right neigh
+
+    rightneigh->west = leftneigh; // right node west ptr ppints to currs west neigh
+
+    leftneigh->skipright = carved->skipright + 1;
+
+    rightneigh->skipleft = carved->skipleft + 1;
+
+    // north and south bit trickier, add skipup and skipdown prev values if exist
+
+    if (northneigh != NULL)
+    { // if we're not at the top row
+      northneigh->skipdown = carved->skipdown + 1;
+    }
+
+    if (southneigh != NULL) // if we're not at the bottom
+    {
+      southneigh->skipup = carved->skipup + 1;
+    }
+
+    delete carved; // delete carved
+
+    carved = row->south; // iterate down
+    row = row->south;
+
+    carved = SelectNode(row, selectionmode); // reassign carved to next row to select new node
+  }
 }
 
 // note that a node on the boundary will never be selected for removal
@@ -446,6 +547,9 @@ void ImgList::Carve(int selectionmode)
 void ImgList::Carve(unsigned int rounds, int selectionmode)
 {
   // add your implementation here
+  // I didn't get my carve points until implemented the first version of render (!fillgaps). // mmove to carve
+
+  //  mean that if rounds > (width - 2) then removes (width - 2) nodes each row so there are 2 nodes left which is the first and the last node?
 }
 
 /*
@@ -456,6 +560,7 @@ void ImgList::Carve(unsigned int rounds, int selectionmode)
  */
 void ImgList::Clear()
 {
+  // memory leak
 
   if (northwest != NULL)
   {
@@ -485,9 +590,7 @@ void ImgList::Clear()
         curr = row->south;
         row = row->south;
       }
-
     }
-    
   }
 
   northwest = NULL;
