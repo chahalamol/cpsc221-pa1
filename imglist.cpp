@@ -357,7 +357,6 @@ ImgNode *ImgList::SelectNode(ImgNode *rowstart, int selectionmode)
  */
 PNG ImgList::Render(bool fillgaps, int fillmode) const
 {
- 
 
   PNG outpng; // this will be returned later. Might be a good idea to resize it at some point.
 
@@ -397,7 +396,7 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const
       x = 0; // reset x
     }
   }
-  else
+  else if (fillgaps == true)
   {
 
     if (fillmode == 0)
@@ -408,9 +407,7 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const
 
       int x = 0; // x
       int y = 0; // y
-      int z = 0;
-   
-      
+      int z = 0; // z
 
       while (row != NULL)
       {
@@ -418,30 +415,27 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const
         while (curr != NULL)
         { // iterate left to right
 
-           HSLAPixel *pixel = outpng.getPixel(x, y); 
-                                       
-           *pixel = curr->colour;
+          HSLAPixel *pixel = outpng.getPixel(x, y);
 
-        
-          while (z < curr->skipright){
+          *pixel = curr->colour;
 
-                z++;
+          while (z < curr->skipright)
+          {
 
-                x += z;
+            z++;
 
-               HSLAPixel *pixel = outpng.getPixel(x, y); // pixel to right..
+            x++; // iterate x for every carved node
 
-               *pixel = curr->colour;   // set x+1 pixel to same as curr (which is west)
-          
-                } 
+            HSLAPixel *pixel = outpng.getPixel(x, y); // pixel to right..
 
-              
+            *pixel = curr->colour; // set x+1 pixel to same as curr (which is west)
+          }
 
-           curr = curr->east;   // move curr to next node
+          curr = curr->east; // move curr to next node
 
-            x++;    // since we moved again..  
+          x++; // since we moved again..
 
-            z = 0;        // restart for next loop 
+          z = 0; // restart for next loop
         }
 
         row = row->south;
@@ -449,19 +443,12 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const
 
         y++;
         x = 0; // reset x
-
       }
     }
   }
 
   return outpng;
 }
-
-
-
-
-
-
 
 /************
  * MODIFIERS *
@@ -523,7 +510,6 @@ void ImgList::Carve(int selectionmode)
 
     delete carved; // delete carved
 
-    carved = row->south; // iterate down
     row = row->south;
 
     carved = SelectNode(row, selectionmode); // reassign carved to next row to select new node
@@ -546,10 +532,106 @@ void ImgList::Carve(int selectionmode)
  */
 void ImgList::Carve(unsigned int rounds, int selectionmode)
 {
-  // add your implementation here
-  // I didn't get my carve points until implemented the first version of render (!fillgaps). // mmove to carve
 
   //  mean that if rounds > (width - 2) then removes (width - 2) nodes each row so there are 2 nodes left which is the first and the last node?
+
+  // update links and skipvalues
+
+  int z = 0; // var to keep track of loops to match rounds
+  ImgNode *row = northwest;
+
+  if (rounds < GetDimensionFullX() - 2)
+  {
+
+    while (z < rounds)
+    {
+
+      ImgNode *carved = SelectNode(northwest, selectionmode); // same selection mode and starts at NW
+
+      while (row != NULL)
+      {
+
+        ImgNode *leftneigh = carved->west;
+        ImgNode *rightneigh = carved->east;
+        ImgNode *northneigh = carved->north;
+        ImgNode *southneigh = carved->south;
+
+        leftneigh->east = rightneigh; // left node east ptr points to currs right neigh
+
+        rightneigh->west = leftneigh; // right node west ptr ppints to currs west neigh
+
+        leftneigh->skipright = carved->skipright + 1;
+
+        rightneigh->skipleft = carved->skipleft + 1;
+
+        // north and south bit trickier, add skipup and skipdown prev values if exist
+
+        if (northneigh != NULL)
+        { // if we're not at the top row
+          northneigh->skipdown = carved->skipdown + 1;
+        }
+
+        if (southneigh != NULL) // if we're not at the bottom
+        {
+          southneigh->skipup = carved->skipup + 1;
+        }
+
+        delete carved; // delete carved
+
+        row = row->south;
+
+        carved = SelectNode(row, selectionmode); // reassign carved to next row to select new node
+      }
+
+      z++;
+    }
+  }
+  else if (rounds > GetDimensionFullX() - 2)
+  { // then remove width - 2 nodes to keep only first and last one remaining
+
+    while (z < GetDimensionFullX() - 2)
+    {
+
+      ImgNode *carved = SelectNode(northwest, selectionmode); // same selection mode and starts at NW
+
+      while (row != NULL)
+      {
+
+        ImgNode *leftneigh = carved->west;
+        ImgNode *rightneigh = carved->east;
+        ImgNode *northneigh = carved->north;
+        ImgNode *southneigh = carved->south;
+
+        leftneigh->east = rightneigh; // left node east ptr points to currs right neigh
+
+        rightneigh->west = leftneigh; // right node west ptr ppints to currs west neigh
+
+        leftneigh->skipright = carved->skipright + 1;
+
+        rightneigh->skipleft = carved->skipleft + 1;
+
+        // north and south bit trickier, add skipup and skipdown prev values if exist
+
+        if (northneigh != NULL)
+        { // if we're not at the top row
+          northneigh->skipdown = carved->skipdown + 1;
+        }
+
+        if (southneigh != NULL) // if we're not at the bottom
+        {
+          southneigh->skipup = carved->skipup + 1;
+        }
+
+        delete carved; // delete carved
+
+        row = row->south;
+
+        carved = SelectNode(row, selectionmode); // reassign carved to next row to select new node
+      }
+
+      z++;
+    }
+  }
 }
 
 /*
